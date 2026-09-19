@@ -69,12 +69,17 @@ class SlidingWindowBuffer:
         self._turns: list[dict] = []
 
     def add(self, role: str, content: str) -> None:
-        # TODO: append the turn and evict oldest if over max_turns
-        raise NotImplementedError
+        if not role:
+            raise ValueError("role must not be empty")
+        if content is None:
+            raise ValueError("content must not be None")
+
+        self._turns.append({"role": role, "content": content})
+        if len(self._turns) > self.max_turns:
+            self._turns.pop(0)
 
     def get(self) -> list[dict]:
-        # TODO: return the current list of turns
-        raise NotImplementedError
+        return list(self._turns)
 
     def __len__(self) -> int:
         return len(self._turns)
@@ -92,8 +97,19 @@ def store_memory(text: str, metadata: dict | None = None) -> str:
     Call collection.add() with ids, documents, and metadatas.
     Return the ID string.
     """
-    # TODO: implement
-    raise NotImplementedError
+    global _memory_counter
+
+    if not text:
+        raise ValueError("text must not be empty")
+
+    _memory_counter += 1
+    memory_id = f"mem_{_memory_counter:04d}"
+    collection.add(
+        ids=[memory_id],
+        documents=[text],
+        metadatas=[metadata or {}],
+    )
+    return memory_id
 
 
 # ── TODO 3: retrieve_memories ─────────────────────────────────────────────────
@@ -106,8 +122,21 @@ def retrieve_memories(query: str, top_k: int = TOP_K_MEMORIES) -> list[str]:
     Use collection.query() with n_results=min(top_k, collection.count()).
     Return the list of document strings (not metadata, not IDs).
     """
-    # TODO: implement
-    raise NotImplementedError
+    if not query:
+        return []
+
+    count = collection.count()
+    if count == 0:
+        return []
+
+    results = collection.query(
+        query_texts=[query],
+        n_results=min(top_k, count),
+    )
+    documents = results.get("documents", [[]])
+    if not documents or not documents[0]:
+        return []
+    return [doc for doc in documents[0] if doc]
 
 
 # ── build_context (already done for you) ─────────────────────────────────────
